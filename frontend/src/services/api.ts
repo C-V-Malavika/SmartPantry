@@ -3,6 +3,7 @@ export interface User {
   id: number;
   email: string;
   name: string;
+  is_admin?: boolean;
   created_at: string;
 }
 
@@ -15,6 +16,7 @@ export interface SignupData {
   name: string;
   email: string;
   password: string;
+  admin_secret_key?: string;
 }
 
 export interface AuthResponse {
@@ -102,7 +104,9 @@ class ApiService {
   }
 
   isAuthenticated(): boolean {
-    return !!this.token;
+    // Check both instance token and localStorage
+    const token = this.token || localStorage.getItem('auth_token');
+    return !!token;
   }
 
   setToken(token: string): void {
@@ -114,6 +118,49 @@ class ApiService {
     this.token = null;
     localStorage.removeItem('auth_token');
     localStorage.removeItem('user');
+  }
+
+  async uploadImage(file: File, folder: 'ingredients' | 'food', name: string): Promise<{ filename: string; path: string; url: string }> {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('folder', folder);
+    formData.append('name', name);
+
+    // Get fresh token from localStorage
+    const token = localStorage.getItem('auth_token') || this.token;
+
+    const url = `${this.baseURL}/admin/upload-image`;
+    const config: RequestInit = {
+      method: 'POST',
+      body: formData,
+      headers: {},
+    };
+
+    // Don't set Content-Type for FormData - browser will set it with boundary
+    if (token) {
+      config.headers = {
+        'Authorization': `Bearer ${token}`,
+      };
+    } else {
+      throw new Error('Not authenticated. Please log in again.');
+    }
+
+    try {
+      const response = await fetch(url, config);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        const message = errorData.detail || 'Failed to upload image';
+        throw new Error(message);
+      }
+
+      return await response.json();
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('Network error occurred');
+    }
   }
 }
 

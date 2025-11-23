@@ -8,6 +8,7 @@ class UserBase(BaseModel):
 
 class UserCreate(UserBase):
     password: str
+    admin_secret_key: Optional[str] = None
 
 class UserLogin(BaseModel):
     email: EmailStr
@@ -15,6 +16,7 @@ class UserLogin(BaseModel):
 
 class User(UserBase):
     id: int
+    is_admin: bool = False
     created_at: datetime
 
     class Config:

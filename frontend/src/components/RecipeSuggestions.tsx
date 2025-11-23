@@ -6,6 +6,11 @@ import { Clock, Users, ChefHat, Star, Filter, X } from 'lucide-react';
 import { db } from "@/firebase";
 import { collection, getDocs } from "firebase/firestore";
 
+interface IngredientWithMeasure {
+  name: string;
+  measure: string;
+}
+
 interface Recipe {
   id: string;
   name: string;
@@ -13,7 +18,7 @@ interface Recipe {
   cookingTime: string;
   difficulty: string;
   servings: number;
-  ingredients: string[];
+  ingredients: IngredientWithMeasure[] | string[]; // Support both old and new format
   image: string;
 }
 
@@ -40,6 +45,15 @@ export const RecipeSuggestions: React.FC<RecipeSuggestionsProps> = ({ pantryIngr
         
         const recipesList = foodSnapshot.docs.map(doc => {
           const data = doc.data();
+          // Handle both old format (string[]) and new format (IngredientWithMeasure[])
+          let ingredients = data.Ingredients || data.ingredients || [];
+          // Convert old format to new format if needed
+          if (ingredients.length > 0 && typeof ingredients[0] === 'string') {
+            ingredients = ingredients.map((ing: string) => ({
+              name: ing.split(/[-:]/)[0].trim(),
+              measure: ing.includes(':') || ing.includes('-') ? ing.split(/[-:]/).slice(1).join(' ').trim() : ''
+            }));
+          }
           return {
             id: doc.id,
             name: data.Name || data.name || doc.id,
@@ -47,7 +61,7 @@ export const RecipeSuggestions: React.FC<RecipeSuggestionsProps> = ({ pantryIngr
             cookingTime: data['Cooking Time'] || data.cookingTime || '',
             difficulty: data.Difficulty || data.difficulty || 'Easy',
             servings: data.Servings || data.servings || 1,
-            ingredients: data.Ingredients || data.ingredients || [],
+            ingredients: ingredients,
             image: data.Image || data.image || ''
           };
         });
@@ -70,9 +84,12 @@ export const RecipeSuggestions: React.FC<RecipeSuggestionsProps> = ({ pantryIngr
       // 🔍 NEW: Search match logic
       const searchMatch =
         recipe.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        recipe.ingredients.some(ing =>
-          ing.toLowerCase().includes(searchTerm.toLowerCase())
-        );
+        recipe.ingredients.some(ing => {
+          const ingredientName = typeof ing === 'string' 
+            ? ing.toLowerCase()
+            : ing.name.toLowerCase();
+          return ingredientName.includes(searchTerm.toLowerCase());
+        });
 
       return difficultyMatch && searchMatch;
     });
@@ -80,7 +97,9 @@ export const RecipeSuggestions: React.FC<RecipeSuggestionsProps> = ({ pantryIngr
     // Calculate match score based on pantry ingredients
     const recipesWithScore = filtered.map(recipe => {
       const matchingIngredients = recipe.ingredients.filter(ingredient => {
-        const ingredientName = ingredient.split(/[-:]/)[0].trim().toLowerCase();
+        const ingredientName = typeof ingredient === 'string' 
+          ? ingredient.split(/[-:]/)[0].trim().toLowerCase()
+          : ingredient.name.trim().toLowerCase();
         return pantryIngredientIds.some(
           pantryItem => pantryItem.trim().toLowerCase() === ingredientName
         );
@@ -266,7 +285,9 @@ export const RecipeSuggestions: React.FC<RecipeSuggestionsProps> = ({ pantryIngr
                 <h4 className="text-sm font-medium">Ingredients:</h4>
                 <div className="flex flex-wrap gap-1">
                   {recipe.ingredients.slice(0, 4).map((ingredient, index) => {
-                    const ingredientName = ingredient.split(/[-:]/)[0].trim();
+                    const ingredientName = typeof ingredient === 'string' 
+                      ? ingredient.split(/[-:]/)[0].trim()
+                      : ingredient.name.trim();
                     return (
                       <Badge
                         key={index}
@@ -361,16 +382,31 @@ export const RecipeSuggestions: React.FC<RecipeSuggestionsProps> = ({ pantryIngr
 
               <div>
                 <h3 className="text-lg font-semibold mb-2">Ingredients</h3>
-                <div className="flex flex-wrap gap-2">
-                  {selectedRecipe.ingredients.map((ingredient, index) => (
-                    <Badge
-                      key={index}
-                      variant={pantryIngredientIds.includes(ingredient) ? 'default' : 'outline'}
-                      className="text-sm"
-                    >
-                      {ingredient}
-                    </Badge>
-                  ))}
+                <div className="space-y-2">
+                  {selectedRecipe.ingredients.map((ingredient, index) => {
+                    const ingredientName = typeof ingredient === 'string' 
+                      ? ingredient.split(/[-:]/)[0].trim()
+                      : ingredient.name.trim();
+                    const ingredientMeasure = typeof ingredient === 'string'
+                      ? (ingredient.includes(':') || ingredient.includes('-') 
+                          ? ingredient.split(/[-:]/).slice(1).join(' ').trim()
+                          : '')
+                      : ingredient.measure.trim();
+                    const displayText = ingredientMeasure 
+                      ? `${ingredientName} - ${ingredientMeasure}`
+                      : ingredientName;
+                    
+                    return (
+                      <div key={index} className="flex items-center gap-2">
+                        <Badge
+                          variant={pantryIngredientIds.includes(ingredientName) ? 'default' : 'outline'}
+                          className="text-sm"
+                        >
+                          {displayText}
+                        </Badge>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
 

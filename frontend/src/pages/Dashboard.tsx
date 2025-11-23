@@ -2,7 +2,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ChefHat, ShoppingBasket, Clock, TrendingUp, Search, Plus, Package } from 'lucide-react';
+import { ChefHat, ShoppingBasket, Clock, TrendingUp, Search, Plus, Package, Shield } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { IngredientBrowser } from '@/components/IngredientBrowser';
@@ -88,9 +88,17 @@ const Dashboard = () => {
             </h1>
             <p className="text-muted-foreground mt-2">Ready to cook something amazing?</p>
           </div>
-          <Button onClick={handleLogout} variant="outline">
-            Logout
-          </Button>
+          <div className="flex gap-2">
+            {user?.is_admin && (
+              <Button onClick={() => navigate('/admin')} variant="default">
+                <Shield className="mr-2 h-4 w-4" />
+                Admin Dashboard
+              </Button>
+            )}
+            <Button onClick={handleLogout} variant="outline">
+              Logout
+            </Button>
+          </div>
         </div>
 
         {/* Quick Stats */}

@@ -8,7 +8,7 @@ if defined _OLD_CODEPAGE (
     "%SystemRoot%\System32\chcp.com" 65001 > nul
 )
 
-set VIRTUAL_ENV=D:\Semester 7\Full Stack Development\Project_FSD\SmartPantry\backend\fsd
+set VIRTUAL_ENV=D:\Semester 7\Full Stack Development\FSD-SmartPantry\backend\fsd
 
 if not defined PROMPT set PROMPT=$P$G
 

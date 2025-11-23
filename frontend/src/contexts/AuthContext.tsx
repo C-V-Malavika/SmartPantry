@@ -34,6 +34,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const login = (token: string, userData: User) => {
     localStorage.setItem('auth_token', token);
     localStorage.setItem('user', JSON.stringify(userData));
+    apiService.setToken(token);
     setUser(userData);
   };
 
@@ -44,6 +45,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const checkAuth = async () => {
     try {
+      // Update token in apiService from localStorage
+      const token = localStorage.getItem('auth_token');
+      if (token) {
+        apiService.setToken(token);
+      }
+      
       if (apiService.isAuthenticated()) {
         const userData = await apiService.getCurrentUser();
         setUser(userData);

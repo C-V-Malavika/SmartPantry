@@ -1,11 +1,23 @@
 # app.py - Update your CORS and OPTIONS handling
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI, Depends, HTTPException, status, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 from datetime import datetime
 import crud, models, schemas, auth
 from database import SessionLocal, engine
 from fastapi.security import HTTPBearer
+import os
+import shutil
+from pathlib import Path
+from dotenv import load_dotenv
+
+# Load .env file - try both current directory and backend directory
+env_path = Path(__file__).parent / ".env"
+if env_path.exists():
+    load_dotenv(dotenv_path=env_path)
+else:
+    load_dotenv()  # Fallback to default location
 
 # Create database tables
 models.Base.metadata.create_all(bind=engine)
@@ -33,13 +45,48 @@ def get_db():
 
 @app.post("/register", response_model=schemas.User)
 def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
-    db_user = crud.get_user_by_email(db, email=user.email)
-    if db_user:
+    try:
+        db_user = crud.get_user_by_email(db, email=user.email)
+        if db_user:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email already registered"
+            )
+        
+        # Check if admin secret key is provided and correct
+        is_admin = False
+        admin_secret = os.getenv("ADMIN_SECRET_KEY", "admin123")  # Default secret, change in production
+        
+        # Debug: Check if .env is loaded (only show if key is provided)
+        if user.admin_secret_key:
+            env_loaded = os.getenv("ADMIN_SECRET_KEY") is not None
+            print(f"DEBUG: Admin secret key provided. .env loaded: {env_loaded}")
+            if not env_loaded:
+                print("WARNING: ADMIN_SECRET_KEY not found in environment. Using default.")
+        
+        if user.admin_secret_key:
+            if user.admin_secret_key.strip() == admin_secret.strip():
+                is_admin = True
+                print(f"DEBUG: User will be created as admin")
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Invalid admin secret key. Please check your .env file or contact administrator."
+                )
+        
+        result = crud.create_user(db=db, user=user, is_admin=is_admin)
+        print(f"DEBUG: User created successfully. Email: {result.email}, is_admin: {result.is_admin}")
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"ERROR in register: {str(e)}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email already registered"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Registration failed: {str(e)}"
         )
-    return crud.create_user(db=db, user=user)
 
 @app.post("/login")
 def login(user: schemas.UserLogin, db: Session = Depends(get_db)):
@@ -58,12 +105,12 @@ def login(user: schemas.UserLogin, db: Session = Depends(get_db)):
             "id": db_user.id,
             "email": db_user.email,
             "name": db_user.name,
+            "is_admin": db_user.is_admin,
             "created_at": db_user.created_at.isoformat()
         }
     }
 
-@app.get("/users/me", response_model=schemas.User)
-def read_users_me(
+def get_current_user(
     token: str = Depends(security),
     db: Session = Depends(get_db)
 ):
@@ -81,6 +128,18 @@ def read_users_me(
         )
     return user
 
+def get_admin_user(current_user: models.User = Depends(get_current_user)):
+    if not current_user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required"
+        )
+    return current_user
+
+@app.get("/users/me", response_model=schemas.User)
+def read_users_me(current_user: models.User = Depends(get_current_user)):
+    return current_user
+
 @app.get("/")
 def read_root():
     return {"message": "SmartPantry API is running"}
@@ -88,3 +147,86 @@ def read_root():
 @app.get("/health")
 def health_check():
     return {"status": "healthy", "timestamp": datetime.utcnow().isoformat()}
+
+def normalize_filename(name: str) -> str:
+    """
+    Convert name to filename convention:
+    - Single word: all lowercase
+    - Multiple words: words separated by underscores, all lowercase
+    """
+    # Remove extra spaces and split by spaces
+    words = name.strip().split()
+    # Join with underscores and convert to lowercase
+    normalized = '_'.join(words).lower()
+    return normalized
+
+# File upload endpoint for admin
+@app.post("/admin/upload-image")
+async def upload_image(
+    file: UploadFile = File(...),
+    folder: str = Form("ingredients"),  # "ingredients" or "food"
+    name: str = Form(...),  # Name of ingredient/recipe for filename
+    admin_user: models.User = Depends(get_admin_user)
+):
+    """
+    Upload an image file to the frontend assets folder.
+    folder: "ingredients" or "food"
+    name: Name of the ingredient/recipe (used for filename)
+    """
+    # Validate folder
+    if folder not in ["ingredients", "food"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Folder must be 'ingredients' or 'food'"
+        )
+    
+    # Validate file type
+    if not file.content_type or not file.content_type.startswith('image/'):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="File must be an image"
+        )
+    
+    # Validate name
+    if not name or not name.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Name is required"
+        )
+    
+    # Get the file extension
+    file_ext = Path(file.filename).suffix if file.filename else '.jpg'
+    
+    # Normalize the name according to convention
+    normalized_name = normalize_filename(name)
+    filename = f"{normalized_name}{file_ext}"
+    
+    # Path to frontend assets folder (relative to backend)
+    assets_path = Path(__file__).parent.parent / "frontend" / "public" / "assets" / folder
+    assets_path.mkdir(parents=True, exist_ok=True)
+    
+    file_path = assets_path / filename
+    
+    # Check if file already exists and handle overwrite
+    if file_path.exists():
+        # If file exists, we'll overwrite it (same name = same ingredient/recipe)
+        pass
+    
+    # Save the file
+    try:
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to save file: {str(e)}"
+        )
+    
+    # Return the relative path for Firestore
+    relative_path = f"assets/{folder}/{filename}"
+    
+    return {
+        "filename": filename,
+        "path": relative_path,
+        "url": f"/{relative_path}"
+    }

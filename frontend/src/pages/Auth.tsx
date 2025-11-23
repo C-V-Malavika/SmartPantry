@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ChefHat, Mail, Lock, User } from "lucide-react";
+import { ChefHat, Mail, Lock, User, Shield } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { apiService, LoginData, SignupData } from "@/services/api";
@@ -24,6 +24,7 @@ const Auth = () => {
   const [signupName, setSignupName] = useState("");
   const [signupEmail, setSignupEmail] = useState("");
   const [signupPassword, setSignupPassword] = useState("");
+  const [signupAdminKey, setSignupAdminKey] = useState("");
 
   useEffect(() => {
     const mode = searchParams.get("mode");
@@ -52,8 +53,12 @@ const Auth = () => {
         description: `Welcome back, ${response.user.name}!`,
       });
       
-      // Redirect to dashboard
-      navigate("/dashboard");
+      // Redirect to admin dashboard if admin, otherwise regular dashboard
+      if (response.user.is_admin) {
+        navigate("/admin");
+      } else {
+        navigate("/dashboard");
+      }
     } catch (error) {
       toast({
         title: "Login failed",
@@ -74,6 +79,7 @@ const Auth = () => {
         name: signupName,
         email: signupEmail,
         password: signupPassword,
+        admin_secret_key: signupAdminKey.trim() || undefined,
       };
 
       const user = await apiService.signup(signupData);
@@ -88,6 +94,7 @@ const Auth = () => {
       setSignupName("");
       setSignupEmail("");
       setSignupPassword("");
+      setSignupAdminKey("");
       
       // Pre-fill login email
       setLoginEmail(signupEmail);
@@ -231,6 +238,25 @@ const Auth = () => {
                       />
                     </div>
                     <p className="text-xs text-muted-foreground">Password must be at least 8 characters long</p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="signup-admin-key">Admin Secret Key (Optional)</Label>
+                    <div className="relative">
+                      <Shield className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="signup-admin-key"
+                        type="password"
+                        placeholder="Enter admin secret key to create admin account"
+                        value={signupAdminKey}
+                        onChange={(e) => setSignupAdminKey(e.target.value)}
+                        className="pl-10"
+                        disabled={isLoading}
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Leave empty for regular account. Enter secret key to create admin account.
+                    </p>
                   </div>
 
                   <Button 

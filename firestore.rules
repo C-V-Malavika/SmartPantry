@@ -1,0 +1,20 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Allow read/write access to Ingredients collection
+    match /Ingredients/{document=**} {
+      allow read, write: if true;
+    }
+    
+    // Allow read/write access to Food collection
+    match /Food/{document=**} {
+      allow read, write: if true;
+    }
+    
+    // Deny all other access
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
+
