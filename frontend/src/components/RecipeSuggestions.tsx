@@ -1,8 +1,9 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Clock, Users, ChefHat, Star, Filter, X } from 'lucide-react';
+import { Clock, Users, ChefHat, Star, Filter, X, Search } from 'lucide-react';
 import { db } from "@/firebase";
 import { collection, getDocs } from "firebase/firestore";
 
@@ -175,53 +176,56 @@ export const RecipeSuggestions: React.FC<RecipeSuggestionsProps> = ({ pantryIngr
     <div className="space-y-6">
 
       {/* Search Bar */}
-      <input
-        type="text"
-        placeholder="Search recipes by name or ingredient..."
-        value={searchTerm}
-        onChange={(e) => setSearchTerm(e.target.value)}
-        className="border rounded-xl w-full p-3 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
-      />
-
-      {/* Filters and Sorting */}
-      <div className="flex flex-col sm:flex-row gap-4 mt-4">
-        <div className="flex gap-2 flex-wrap">
-          <Button
-            variant={selectedDifficulty === 'All' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setSelectedDifficulty('All')}
-          >
-            All
-          </Button>
-          {['Easy', 'Medium', 'Hard'].map(difficulty => (
-            <Button
-              key={difficulty}
-              variant={selectedDifficulty === difficulty ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setSelectedDifficulty(difficulty)}
-            >
-              {difficulty}
-            </Button>
-          ))}
+      <div className="space-y-3">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+          <Input
+            placeholder="Search recipes by name or ingredient..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10 w-full"
+          />
         </div>
 
-        <div className="flex gap-2 ml-auto">
-          <Button
-            variant={sortBy === 'ingredients' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setSortBy('ingredients')}
-          >
-            <Filter className="mr-1 h-3 w-3" />
-            Match
-          </Button>
-          <Button
-            variant={sortBy === 'time' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setSortBy('time')}
-          >
-            <Clock className="mr-1 h-3 w-3" />
-            Time
-          </Button>
+        <div className="flex items-center gap-2">
+          <div className="flex gap-2 flex-wrap">
+            <Button
+              variant={selectedDifficulty === 'All' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setSelectedDifficulty('All')}
+            >
+              All
+            </Button>
+            {['Easy', 'Medium', 'Hard'].map(difficulty => (
+              <Button
+                key={difficulty}
+                variant={selectedDifficulty === difficulty ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setSelectedDifficulty(difficulty)}
+              >
+                {difficulty}
+              </Button>
+            ))}
+          </div>
+
+          <div className="flex gap-2 ml-auto">
+            <Button
+              variant={sortBy === 'ingredients' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setSortBy('ingredients')}
+            >
+              <Filter className="mr-1 h-3 w-3" />
+              Match
+            </Button>
+            <Button
+              variant={sortBy === 'time' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setSortBy('time')}
+            >
+              <Clock className="mr-1 h-3 w-3" />
+              Time
+            </Button>
+          </div>
         </div>
       </div>
 

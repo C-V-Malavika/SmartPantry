@@ -517,6 +517,13 @@ const AddRecipeForm = () => {
               type="number"
               min="1"
               value={formData.servings}
+              onFocus={(e: React.FocusEvent<HTMLInputElement>) => e.currentTarget.select()}
+              onBlur={(e: React.FocusEvent<HTMLInputElement>) => {
+                const v = parseInt(e.currentTarget.value || '0', 10);
+                if (isNaN(v) || v < 1) {
+                  setFormData({ ...formData, servings: 1 });
+                }
+              }}
               onChange={(e) => setFormData({ ...formData, servings: parseInt(e.target.value) || 1 })}
               required
               disabled={isLoading}

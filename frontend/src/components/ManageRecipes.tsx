@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { firestoreService, IngredientWithMeasure } from '@/services/firestore';
+import { apiService } from '@/services/api';
 import { db } from '@/firebase';
 import { collection, getDocs } from 'firebase/firestore';
 import { Edit, Trash2, X, Save, ChevronDown, Plus } from 'lucide-react';
@@ -31,12 +32,27 @@ const ManageRecipes = () => {
     ingredients: IngredientWithMeasure[];
     recipe: string;
   } | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editImageFile, setEditImageFile] = useState<File | null>(null);
+  const [editImagePreview, setEditImagePreview] = useState<string | null>(null);
+  const [editCookingTime, setEditCookingTime] = useState('');
+  const [editServings, setEditServings] = useState<number>(1);
+  const [searchTerm, setSearchTerm] = useState('');
   const [availableIngredients, setAvailableIngredients] = useState<Array<{ id: string; name: string }>>([]);
   const [showIngredientDropdowns, setShowIngredientDropdowns] = useState<{ [key: string]: boolean }>({});
   const [ingredientInputs, setIngredientInputs] = useState<{ [key: string]: string }>({});
   const [showDifficultyDropdown, setShowDifficultyDropdown] = useState<{ [key: string]: boolean }>({});
 
   const difficultyOptions = ['Easy', 'Medium', 'Hard'];
+
+  const resolveImageSrc = (path: string | undefined | null) => {
+    if (!path) return null;
+    const trimmed = path.trim();
+    if (!trimmed) return null;
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) return trimmed;
+    if (trimmed.startsWith('/')) return trimmed;
+    return `/${trimmed}`;
+  };
 
   useEffect(() => {
     fetchRecipes();
@@ -140,6 +156,11 @@ const ManageRecipes = () => {
       ingredients: ingredients,
       recipe: recipe.Recipe,
     });
+    setEditName(recipe.Name);
+    setEditImageFile(null);
+    setEditImagePreview(recipe.Image ? (recipe.Image.startsWith('http') ? recipe.Image : `/${recipe.Image}`) : null);
+    setEditCookingTime(recipe['Cooking Time'] || '');
+    setEditServings(recipe.Servings || 1);
     
     // Initialize inputs
     const inputs: { [key: string]: string } = {};
@@ -152,18 +173,46 @@ const ManageRecipes = () => {
   const handleSave = async (id: string) => {
     if (!editData) return;
 
+    const token = localStorage.getItem('auth_token');
+    if (!token) {
+      toast({ title: 'Not authenticated', description: 'Please sign in to perform this action', variant: 'destructive' });
+      return;
+    }
+
     try {
       const recipe = recipes.find(r => r.id === id);
       if (!recipe) return;
 
+      if (!editName.trim()) {
+        toast({ title: 'Validation error', description: 'Please enter a recipe name', variant: 'destructive' });
+        return;
+      }
+
+      if (!editCookingTime.trim()) {
+        toast({ title: 'Validation error', description: 'Please enter cooking time', variant: 'destructive' });
+        return;
+      }
+
+      if (!editServings || editServings < 1) {
+        toast({ title: 'Validation error', description: 'Servings must be at least 1', variant: 'destructive' });
+        return;
+      }
+
+      // handle image upload if changed
+      let imagePath = recipe.Image;
+      if (editImageFile) {
+        const uploadResult = await apiService.uploadImage(editImageFile, 'food', editName || recipe.Name);
+        imagePath = uploadResult.path;
+      }
+
       await firestoreService.updateRecipe(id, {
-        Name: recipe.Name,
-        'Cooking Time': recipe['Cooking Time'],
+        Name: editName.trim(),
+        'Cooking Time': editCookingTime.trim(),
         Difficulty: editData.difficulty,
-        Image: recipe.Image,
+        Image: imagePath,
         Ingredients: editData.ingredients.filter(ing => ing.name.trim() !== ''),
         Recipe: editData.recipe,
-        Servings: recipe.Servings,
+        Servings: editServings,
       });
 
       toast({
@@ -173,6 +222,11 @@ const ManageRecipes = () => {
 
       setEditingId(null);
       setEditData(null);
+      setEditName('');
+      setEditImageFile(null);
+      setEditImagePreview(null);
+      setEditCookingTime('');
+      setEditServings(1);
       fetchRecipes();
     } catch (error) {
       toast({
@@ -180,6 +234,20 @@ const ManageRecipes = () => {
         description: error instanceof Error ? error.message : 'Failed to update recipe',
         variant: 'destructive',
       });
+    }
+  };
+
+  const handleEditImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (!file.type.startsWith('image/')) {
+        toast({ title: 'Invalid file type', description: 'Please select an image file', variant: 'destructive' });
+        return;
+      }
+      setEditImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => setEditImagePreview(reader.result as string);
+      reader.readAsDataURL(file);
     }
   };
 
@@ -258,21 +326,32 @@ const ManageRecipes = () => {
         </CardDescription>
       </CardHeader>
       <CardContent>
+        <div className="mb-4">
+          <input
+            type="text"
+            placeholder="Search recipes by name..."
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+            className="border rounded-md px-3 py-2 w-full max-w-md focus:outline-none focus:ring-2 focus:ring-primary"
+          />
+        </div>
         {recipes.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
             No recipes found. Add some recipes to get started.
           </div>
         ) : (
           <div className="space-y-6">
-            {recipes.map((recipe) => (
+            {recipes
+              .filter(recipe => recipe.Name.toLowerCase().includes(searchTerm?.toLowerCase?.() || ''))
+              .map((recipe) => (
               <div
                 key={recipe.id}
                 className="p-4 border rounded-lg hover:bg-muted/50 transition-colors"
               >
                 <div className="flex items-start gap-4">
-                  {recipe.Image && (
+                  {resolveImageSrc(recipe.Image) && (
                     <img
-                      src={`/${recipe.Image}`}
+                      src={resolveImageSrc(recipe.Image) || ''}
                       alt={recipe.Name}
                       className="w-20 h-20 object-cover rounded-lg"
                       onError={(e) => {
@@ -319,6 +398,65 @@ const ManageRecipes = () => {
 
                     {editingId === recipe.id && editData ? (
                       <div className="mt-4 space-y-4">
+                        <div className="space-y-2">
+                          <Label>Recipe Name</Label>
+                          <Input
+                            type="text"
+                            placeholder="Recipe name"
+                            value={editName}
+                            onChange={(e) => setEditName(e.target.value)}
+                            className="w-1/2"
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label>Image</Label>
+                            <div className="flex items-center gap-4">
+                              <div className="flex-1">
+                                <label htmlFor={`edit-recipe-image-${recipe.id}`} className="inline-block">
+                                  <span className="bg-primary text-white px-4 py-2 rounded-md cursor-pointer hover:bg-primary/90 transition-colors inline-flex items-center">
+                                    Choose Image
+                                  </span>
+                                  <input
+                                    id={`edit-recipe-image-${recipe.id}`}
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={handleEditImageChange}
+                                    className="hidden"
+                                  />
+                                </label>
+                              </div>
+                              {editImagePreview && (
+                                <div className="w-20 h-20 rounded-lg overflow-hidden border border-border">
+                                  <img src={editImagePreview} alt="Preview" className="w-full h-full object-cover" />
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label>Cooking Time</Label>
+                            <Input
+                              type="text"
+                              placeholder="e.g., 30 minutes"
+                              value={editCookingTime}
+                              onChange={(e) => setEditCookingTime(e.target.value)}
+                            />
+                            <Label>Servings</Label>
+                            <Input
+                              type="number"
+                              min={1}
+                              value={String(editServings)}
+                              onFocus={(e: React.FocusEvent<HTMLInputElement>) => e.currentTarget.select()}
+                              onBlur={(e: React.FocusEvent<HTMLInputElement>) => {
+                                const v = parseInt(e.currentTarget.value || '0', 10);
+                                if (isNaN(v) || v < 1) setEditServings(1);
+                              }}
+                              onChange={(e) => setEditServings(parseInt(e.target.value || '1', 10))}
+                            />
+                          </div>
+                        </div>
                         <div>
                           <Label>Difficulty</Label>
                           <div className="relative mt-1">

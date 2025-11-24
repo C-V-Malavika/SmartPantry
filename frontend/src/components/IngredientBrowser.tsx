@@ -93,16 +93,17 @@ export const IngredientBrowser: React.FC<IngredientBrowserProps> = ({ onAddToPan
   return (
     <div className="space-y-6">
       {/* Search and Filter */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1">
+      <div className="space-y-3">
+        <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
           <Input
             placeholder="Search ingredients..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
+            className="pl-10 w-full"
           />
         </div>
+
         <div className="flex gap-2 flex-wrap">
           {categories.map(category => (
             <Button
