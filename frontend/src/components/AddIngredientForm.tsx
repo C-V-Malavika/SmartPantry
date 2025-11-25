@@ -188,7 +188,7 @@ const AddIngredientForm = () => {
       <CardHeader>
         <CardTitle>Add New Ingredient</CardTitle>
         <CardDescription>
-          Add a new ingredient to the database with name, category, and image
+          Add a new ingredient!
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -327,9 +327,6 @@ const AddIngredientForm = () => {
                 </div>
               )}
             </div>
-            <p className="text-xs text-muted-foreground">
-              Image will be saved to assets/ingredients folder
-            </p>
           </div>
 
           <Button

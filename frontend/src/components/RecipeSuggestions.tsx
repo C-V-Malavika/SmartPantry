@@ -31,6 +31,8 @@ export const RecipeSuggestions: React.FC<RecipeSuggestionsProps> = ({ pantryIngr
   const [selectedDifficulty, setSelectedDifficulty] = useState<string>('All');
   const [sortBy, setSortBy] = useState<'rating' | 'time' | 'ingredients'>('ingredients');
   const [recipes, setRecipes] = useState<Recipe[]>([]);
+  // Add state to store resolved pantry ingredient NAMES (normalized)
+  const [pantryNamesSet, setPantryNamesSet] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
 
@@ -78,6 +80,43 @@ export const RecipeSuggestions: React.FC<RecipeSuggestionsProps> = ({ pantryIngr
     fetchRecipes();
   }, []);
 
+  // NEW: Resolve pantryIngredientIds (which may be doc IDs or names) to normalized names
+  useEffect(() => {
+    let mounted = true;
+    const resolvePantryNames = async () => {
+      try {
+        // Fetch all ingredients from Firestore once and build id->name map
+        const ingSnapshot = await getDocs(collection(db, 'Ingredients')).catch(() => null);
+        const idToName: Record<string, string> = {};
+        if (ingSnapshot) {
+          ingSnapshot.docs.forEach(doc => {
+            const data = doc.data();
+            const name = (data.Name || data.name || "").toString().trim().toLowerCase();
+            if (name) idToName[doc.id] = name;
+          });
+        }
+
+        const resolved = pantryIngredientIds
+          .map(pid => {
+            if (!pid) return "";
+            // If pid matches an ingredient doc id, map to its name; otherwise treat as a name
+            const byId = idToName[pid];
+            if (byId) return byId;
+            // fallback: treat pid as name (normalize)
+            return pid.toString().trim().toLowerCase();
+          })
+          .filter(Boolean);
+
+        if (mounted) setPantryNamesSet(new Set(resolved));
+      } catch (err) {
+        if (mounted) setPantryNamesSet(new Set());
+      }
+    };
+
+    resolvePantryNames();
+    return () => { mounted = false; };
+  }, [pantryIngredientIds]);
+
   const filteredAndSortedRecipes = useMemo(() => {
     let filtered = recipes.filter(recipe => {
       const difficultyMatch = selectedDifficulty === 'All' || recipe.difficulty === selectedDifficulty;
@@ -95,15 +134,15 @@ export const RecipeSuggestions: React.FC<RecipeSuggestionsProps> = ({ pantryIngr
       return difficultyMatch && searchMatch;
     });
 
-    // Calculate match score based on pantry ingredients
+    // Calculate match score based on pantry ingredient NAMES (use pantryNamesSet)
     const recipesWithScore = filtered.map(recipe => {
       const matchingIngredients = recipe.ingredients.filter(ingredient => {
         const ingredientName = typeof ingredient === 'string' 
           ? ingredient.split(/[-:]/)[0].trim().toLowerCase()
           : ingredient.name.trim().toLowerCase();
-        return pantryIngredientIds.some(
-          pantryItem => pantryItem.trim().toLowerCase() === ingredientName
-        );
+
+        // Use pantryNamesSet (resolved names) for comparison
+        return pantryNamesSet.has(ingredientName);
       });
 
       const matchScore = matchingIngredients.length / recipe.ingredients.length;
@@ -151,7 +190,7 @@ export const RecipeSuggestions: React.FC<RecipeSuggestionsProps> = ({ pantryIngr
     });
 
     return recipesWithScore;
-  }, [recipes, pantryIngredientIds, selectedDifficulty, sortBy, searchTerm]);
+  }, [recipes, pantryIngredientIds, selectedDifficulty, sortBy, searchTerm, pantryNamesSet]);
 
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
@@ -292,10 +331,11 @@ export const RecipeSuggestions: React.FC<RecipeSuggestionsProps> = ({ pantryIngr
                     const ingredientName = typeof ingredient === 'string' 
                       ? ingredient.split(/[-:]/)[0].trim()
                       : ingredient.name.trim();
+                    // Use pantryNamesSet to decide badge variant (normalize to lower)
                     return (
                       <Badge
                         key={index}
-                        variant={pantryIngredientIds.includes(ingredientName) ? 'default' : 'outline'}
+                        variant={pantryNamesSet.has(ingredientName.toLowerCase()) ? 'default' : 'outline'}
                         className="text-xs"
                       >
                         {ingredientName}
@@ -403,7 +443,7 @@ export const RecipeSuggestions: React.FC<RecipeSuggestionsProps> = ({ pantryIngr
                     return (
                       <div key={index} className="flex items-center gap-2">
                         <Badge
-                          variant={pantryIngredientIds.includes(ingredientName) ? 'default' : 'outline'}
+                          variant={pantryNamesSet.has(ingredientName.toLowerCase()) ? 'default' : 'outline'}
                           className="text-sm"
                         >
                           {displayText}

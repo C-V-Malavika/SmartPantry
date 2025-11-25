@@ -193,7 +193,7 @@ const ManageIngredients = () => {
       <CardHeader>
         <CardTitle>Manage Ingredients</CardTitle>
         <CardDescription>
-          View, edit, or delete ingredients in the database
+          View, edit, or delete ingredients!
         </CardDescription>
       </CardHeader>
       <CardContent>

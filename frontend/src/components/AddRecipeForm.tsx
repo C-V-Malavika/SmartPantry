@@ -293,7 +293,7 @@ const AddRecipeForm = () => {
       <CardHeader>
         <CardTitle>Add New Recipe</CardTitle>
         <CardDescription>
-          Add a new recipe to the database with all required information
+          Add a new recipe!
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -389,9 +389,6 @@ const AddRecipeForm = () => {
                 </div>
               )}
             </div>
-            <p className="text-xs text-muted-foreground">
-              Image will be saved to assets/food folder
-            </p>
           </div>
 
           <div className="space-y-2">

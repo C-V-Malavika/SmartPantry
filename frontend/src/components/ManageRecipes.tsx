@@ -322,7 +322,7 @@ const ManageRecipes = () => {
       <CardHeader>
         <CardTitle>Manage Recipes</CardTitle>
         <CardDescription>
-          View, edit, or delete recipes in the database
+          View, edit, or delete recipes!
         </CardDescription>
       </CardHeader>
       <CardContent>
