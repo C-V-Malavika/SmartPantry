@@ -6,10 +6,12 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import AdminRoute from "@/components/AdminRoute";
+
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import AdminDashboard from "./pages/AdminDashboard";
+import AdminLogin from "./pages/AdminLogin";   // ADD THIS
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -23,7 +25,9 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Index />} />
+
             <Route path="/auth" element={<Auth />} />
+
             <Route 
               path="/dashboard" 
               element={
@@ -32,14 +36,18 @@ const App = () => (
                 </ProtectedRoute>
               } 
             />
+
+            <Route path="/admin/login" element={<AdminLogin />} />
+
             <Route 
-              path="/admin" 
+              path="/admin/dashboard"
               element={
                 <AdminRoute>
                   <AdminDashboard />
                 </AdminRoute>
-              } 
+              }
             />
+
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

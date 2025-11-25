@@ -240,25 +240,6 @@ const Auth = () => {
                     <p className="text-xs text-muted-foreground">Password must be at least 8 characters long</p>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-admin-key">Admin Secret Key (Optional)</Label>
-                    <div className="relative">
-                      <Shield className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="signup-admin-key"
-                        type="password"
-                        placeholder="Enter admin secret key to create admin account"
-                        value={signupAdminKey}
-                        onChange={(e) => setSignupAdminKey(e.target.value)}
-                        className="pl-10"
-                        disabled={isLoading}
-                      />
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      Leave empty for regular account. Enter secret key to create admin account.
-                    </p>
-                  </div>
-
                   <Button 
                     type="submit" 
                     className="w-full bg-gradient-to-r from-primary to-secondary hover:opacity-90 shadow-soft"

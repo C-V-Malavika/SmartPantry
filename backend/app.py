@@ -230,3 +230,39 @@ async def upload_image(
         "path": relative_path,
         "url": f"/{relative_path}"
     }
+
+# from database import SessionLocal
+# from auth import get_password_hash
+
+# @app.on_event("startup")
+# def create_default_admin():
+#     db = SessionLocal()
+
+#     admin_email = "nkmadhukrishaa@gmail.com"
+#     admin_password = "Admin@123"  # You can change this
+#     admin_name = "System Admin"
+
+#     from models import User
+#     from crud import get_user_by_email
+
+#     existing_admin = get_user_by_email(db, admin_email)
+
+#     if not existing_admin:
+#         print("Creating default admin...")
+
+#         hashed_pw = get_password_hash(admin_password)
+
+#         admin_user = User(
+#             name=admin_name,
+#             email=admin_email,
+#             hashed_password=hashed_pw,
+#             is_admin=True
+#         )
+
+#         db.add(admin_user)
+#         db.commit()
+#         db.refresh(admin_user)
+
+#         print("Admin created successfully:", admin_email)
+
+#     db.close()

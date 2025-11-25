@@ -92,6 +92,13 @@ class ApiService {
     });
   }
 
+  async adminLogin(loginData: LoginData): Promise<AuthResponse> {
+    return this.request('/admin/login', {
+      method: 'POST',
+      body: JSON.stringify(loginData),
+    });
+  }
+
   async signup(signupData: SignupData): Promise<User> {
     return this.request('/register', {
       method: 'POST',
