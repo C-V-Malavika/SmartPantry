@@ -7,6 +7,8 @@ from datetime import datetime
 import crud, models, schemas, auth
 from database import SessionLocal, engine
 from fastapi.security import HTTPBearer
+from schemas import AdminLoginSchema
+from auth import verify_password, create_access_token
 import os
 import shutil
 from pathlib import Path
@@ -128,13 +130,6 @@ def get_current_user(
         )
     return user
 
-def get_admin_user(current_user: models.User = Depends(get_current_user)):
-    if not current_user.is_admin:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Admin access required"
-        )
-    return current_user
 
 @app.get("/users/me", response_model=schemas.User)
 def read_users_me(current_user: models.User = Depends(get_current_user)):
@@ -166,7 +161,6 @@ async def upload_image(
     file: UploadFile = File(...),
     folder: str = Form("ingredients"),  # "ingredients" or "food"
     name: str = Form(...),  # Name of ingredient/recipe for filename
-    admin_user: models.User = Depends(get_admin_user)
 ):
     """
     Upload an image file to the frontend assets folder.
@@ -231,38 +225,37 @@ async def upload_image(
         "url": f"/{relative_path}"
     }
 
-# from database import SessionLocal
-# from auth import get_password_hash
+@app.post("/admin/login")
+def admin_login(data: AdminLoginSchema, db: Session = Depends(get_db)):
+    # Fetch logged-in email
+    user = crud.get_user_by_email(db, data.email)
 
-# @app.on_event("startup")
-# def create_default_admin():
-#     db = SessionLocal()
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
 
-#     admin_email = "nkmadhukrishaa@gmail.com"
-#     admin_password = "Admin@123"  # You can change this
-#     admin_name = "System Admin"
+    # Match name (case-insensitive)
+    if user.name.strip().lower() != data.name.strip().lower():
+        raise HTTPException(status_code=401, detail="Admin name mismatch")
 
-#     from models import User
-#     from crud import get_user_by_email
+    # Match password
+    if not verify_password(data.password, user.hashed_password):
+        raise HTTPException(status_code=401, detail="Incorrect password")
 
-#     existing_admin = get_user_by_email(db, admin_email)
+    # Check admin flag
+    if not user.is_admin:
+        raise HTTPException(status_code=403, detail="Not an admin")
 
-#     if not existing_admin:
-#         print("Creating default admin...")
+    # Create token
+    access_token = create_access_token({"sub": user.email})
 
-#         hashed_pw = get_password_hash(admin_password)
-
-#         admin_user = User(
-#             name=admin_name,
-#             email=admin_email,
-#             hashed_password=hashed_pw,
-#             is_admin=True
-#         )
-
-#         db.add(admin_user)
-#         db.commit()
-#         db.refresh(admin_user)
-
-#         print("Admin created successfully:", admin_email)
-
-#     db.close()
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user": {
+            "id": user.id,
+            "email": user.email,
+            "name": user.name,
+            "is_admin": user.is_admin,
+            "created_at": user.created_at.isoformat()
+        }
+    }

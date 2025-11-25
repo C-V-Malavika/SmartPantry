@@ -78,8 +78,7 @@ const Auth = () => {
       const signupData: SignupData = {
         name: signupName,
         email: signupEmail,
-        password: signupPassword,
-        admin_secret_key: signupAdminKey.trim() || undefined,
+        password: signupPassword
       };
 
       const user = await apiService.signup(signupData);

@@ -16,7 +16,12 @@ export interface SignupData {
   name: string;
   email: string;
   password: string;
-  admin_secret_key?: string;
+}
+
+export interface AdminLoginData {
+  name: string;
+  email: string;
+  password: string;
 }
 
 export interface AuthResponse {
@@ -92,7 +97,7 @@ class ApiService {
     });
   }
 
-  async adminLogin(loginData: LoginData): Promise<AuthResponse> {
+  async adminLogin(loginData: AdminLoginData): Promise<AuthResponse> {
     return this.request('/admin/login', {
       method: 'POST',
       body: JSON.stringify(loginData),

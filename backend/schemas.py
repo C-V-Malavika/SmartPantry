@@ -14,6 +14,11 @@ class UserLogin(BaseModel):
     email: EmailStr
     password: str
 
+class AdminLoginSchema(BaseModel):
+    name: str
+    email: str
+    password: str
+
 class User(UserBase):
     id: int
     is_admin: bool = False

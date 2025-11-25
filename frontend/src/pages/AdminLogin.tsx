@@ -37,7 +37,7 @@ const AdminLogin = () => {
         description: `Welcome, ${response.user.name}`,
       });
 
-      navigate("/admin");
+      navigate("/admin/dashboard");
     } catch (error) {
       toast({
         title: "Login failed",
