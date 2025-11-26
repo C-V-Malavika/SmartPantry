@@ -10,7 +10,7 @@ guided and stress-free recipe exploration.
 
 ## Architecture Diagram
 
-<img width="725" height="654" alt="Architecture diagram" src="https://github.com/user-attachments/assets/2ce9218e-43f7-4e05-b75c-39cc0be877c4" />
+<img width="500" height="500" alt="Architecture diagram" src="https://github.com/user-attachments/assets/2ce9218e-43f7-4e05-b75c-39cc0be877c4" />
 
 ## Functionalities
 
