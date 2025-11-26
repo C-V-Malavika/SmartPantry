@@ -19,7 +19,7 @@ interface Recipe {
   cookingTime: string;
   difficulty: string;
   servings: number;
-  ingredients: IngredientWithMeasure[] | string[]; // Support both old and new format
+  ingredients: IngredientWithMeasure[] | string[];
   image: string;
 }
 
@@ -36,7 +36,7 @@ export const RecipeSuggestions: React.FC<RecipeSuggestionsProps> = ({ pantryIngr
   const [loading, setLoading] = useState(true);
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
 
-  // 🔍 NEW: Search state
+  // Search state
   const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
@@ -80,7 +80,7 @@ export const RecipeSuggestions: React.FC<RecipeSuggestionsProps> = ({ pantryIngr
     fetchRecipes();
   }, []);
 
-  // NEW: Resolve pantryIngredientIds (which may be doc IDs or names) to normalized names
+  // Resolve pantryIngredientIds (which may be doc IDs or names) to normalized names
   useEffect(() => {
     let mounted = true;
     const resolvePantryNames = async () => {
@@ -121,7 +121,7 @@ export const RecipeSuggestions: React.FC<RecipeSuggestionsProps> = ({ pantryIngr
     let filtered = recipes.filter(recipe => {
       const difficultyMatch = selectedDifficulty === 'All' || recipe.difficulty === selectedDifficulty;
 
-      // 🔍 NEW: Search match logic
+      // Search match logic
       const searchMatch =
         recipe.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         recipe.ingredients.some(ing => {
@@ -331,7 +331,7 @@ export const RecipeSuggestions: React.FC<RecipeSuggestionsProps> = ({ pantryIngr
                     const ingredientName = typeof ingredient === 'string' 
                       ? ingredient.split(/[-:]/)[0].trim()
                       : ingredient.name.trim();
-                    // Use pantryNamesSet to decide badge variant (normalize to lower)
+                    // Use pantryNamesSet to decide badge variant 
                     return (
                       <Badge
                         key={index}

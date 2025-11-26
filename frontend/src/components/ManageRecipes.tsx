@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
+import { Clock, Users, ChefHat, Star, Filter, Search } from 'lucide-react';
 import { firestoreService, IngredientWithMeasure } from '@/services/firestore';
 import { apiService } from '@/services/api';
 import { db } from '@/firebase';
@@ -364,8 +365,14 @@ const ManageRecipes = () => {
                       <div>
                         <h4 className="font-semibold text-lg">{recipe.Name}</h4>
                         <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
-                          <span>⏱️ {recipe['Cooking Time']}</span>
-                          <span>👥 {recipe.Servings} servings</span>
+                          <div className="flex items-center gap-1">
+                            <Clock className="h-4 w-4" />
+                            {recipe['Cooking Time']}
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Users className="h-4 w-4" />
+                            {recipe.Servings} servings
+                          </div>
                           <Badge variant="secondary">{recipe.Difficulty}</Badge>
                         </div>
                       </div>

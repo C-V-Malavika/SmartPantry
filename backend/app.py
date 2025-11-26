@@ -55,29 +55,8 @@ def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
                 detail="Email already registered"
             )
         
-        # Check if admin secret key is provided and correct
-        is_admin = False
-        admin_secret = os.getenv("ADMIN_SECRET_KEY", "admin123")  # Default secret, change in production
-        
-        # Debug: Check if .env is loaded (only show if key is provided)
-        if user.admin_secret_key:
-            env_loaded = os.getenv("ADMIN_SECRET_KEY") is not None
-            print(f"DEBUG: Admin secret key provided. .env loaded: {env_loaded}")
-            if not env_loaded:
-                print("WARNING: ADMIN_SECRET_KEY not found in environment. Using default.")
-        
-        if user.admin_secret_key:
-            if user.admin_secret_key.strip() == admin_secret.strip():
-                is_admin = True
-                print(f"DEBUG: User will be created as admin")
-            else:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Invalid admin secret key. Please check your .env file or contact administrator."
-                )
-        
-        result = crud.create_user(db=db, user=user, is_admin=is_admin)
-        print(f"DEBUG: User created successfully. Email: {result.email}, is_admin: {result.is_admin}")
+        result = crud.create_user(db=db, user=user)
+        print(f"DEBUG: User created successfully. Email: {result.email}")
         return result
     except HTTPException:
         raise
