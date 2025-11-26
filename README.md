@@ -45,9 +45,3 @@ Read Only:
 - View recipe suggestions based on pantry ingredients.
 - Filter recipes by difficulty level, cooking time, or search by name.
 - Access the full recipe details (steps, ingredients, image, serving size).
-
-## Tech Stack
-
-### Frontend
-
-https://www.pngall.com/wp-content/uploads/15/React-Logo-PNG.png
